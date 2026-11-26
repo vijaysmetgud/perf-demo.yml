@@ -1,1 +1,33 @@
+name: Performance Test
+on:
+  push:
+    branches: [main]
 
+jobs:
+  jmeter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run load test
+        run: docker compose up --build --abort-on-container-exit --exit-code-from jmeter
+
+      - name: Check thresholds
+        run: |
+          python3 - <<'EOF'
+          import csv, sys
+          rows = list(csv.DictReader(open("results/results.jtl")))
+          errors = sum(r["success"] != "true" for r in rows)
+          times = sorted(int(r["elapsed"]) for r in rows)
+          p95 = times[int(len(times) * 0.95)]
+          err_pct = 100 * errors / len(rows)
+          print(f"requests={len(rows)} errors={err_pct:.2f}% p95={p95}ms")
+          if err_pct > 1 or p95 > 800:
+              sys.exit("Performance threshold breached")
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jmeter-report
+          path: results/report/
