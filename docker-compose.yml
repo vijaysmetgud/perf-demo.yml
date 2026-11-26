@@ -1,0 +1,24 @@
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  jmeter:
+    image: justb4/jmeter:5.5
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
+      - ./:/test
+    command: >
+      -n -t /test/load-test.jmx
+      -Jhost=app -Jport=5000
+      -Jusers=50 -Jrampup=10 -Jloops=20
+      -l /test/results/results.jtl
+      -e -o /test/results/report
