@@ -9,6 +9,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prepare results folder
+        run: |
+          mkdir -p results
+          chmod 777 results
       - name: Run load test
         run: docker compose up --build --abort-on-container-exit --exit-code-from jmeter
 
